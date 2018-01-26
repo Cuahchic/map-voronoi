@@ -6,4 +6,5 @@ The initial code for turning the map into a Voronoi diagram comes from [orlp on 
 ## ToDo
 (1) Any deprecated pakcages should be updated to their latest version
 (2) Better image of chart without black border lines
-(3) D3.js visualisation
+(3) Unique identifier and metadata to each cell
+(4) D3.js visualisation
