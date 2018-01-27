@@ -11,6 +11,7 @@ import functools
 import operator as op
 import numpy as np
 import glob
+import json
 
 from scipy.spatial import cKDTree as KDTree
 from skimage.filters.rank import entropy
@@ -215,6 +216,7 @@ def sample_colors(img, sample_points, n, printout = False):
         color_samples.append(tuple(sample[:2][::-1]) + tuple(color))
         
     if printout:
+        # Prepare images for export
         samples_out = np.zeros((h,w))
         for s in color_samples:
             coords = s[:2][::-1]
@@ -252,6 +254,22 @@ def render(img, color_samples):
     return downscale_local_mean(data, (2, 2, 1))
 
 
+# Get the sample centroids and export them as a JSON
+def export_centroids(img, samples):
+    data_out = []
+    for s in samples:
+        coords = s[:2][::-1]
+        int_coords = (int(coords[0]), int(coords[1]))
+        data_out.append(int_coords)
+    
+    output = [{'id': ind, 'coords': coords} for ind, coords in enumerate(data_out)]
+    
+    output_filename = os.path.join(img['path'], '08_' + img['root_filename'] + '_voronoicentroids.json')
+    with open(output_filename, 'w') as outfile:
+        print('Printing {}'.format(output_filename))
+        json.dump(output, outfile)
+
+
 """ **************************************************************
 *************************** START HERE ***************************
 ************************************************************** """
@@ -277,12 +295,12 @@ for img in imgs:
     edge_weight = edges(img, img_lab, printout = True)
     sample_points = poisson_disc(img, entropy_weight, edge_weight, n, k = 30, printout = True)
     samples = sample_colors(img, sample_points, n, printout = True)
-    
-    # Here we put some code to output centroids so we can display them using D3.js
 
     output_filename = os.path.join(img['path'], '07_' + img['root_filename'] + '_voronoi.png')
     print('Printing {}'.format(output_filename))
     imsave(output_filename, render(img, samples))
+    
+    export_centroids(img, samples)
 
     print("Done!")
 
