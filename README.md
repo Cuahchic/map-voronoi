@@ -31,4 +31,4 @@ Obviously, the higher number of samples that are used to construct the output th
 ## Interactive Visualisation
 In conjunction with the Python code above, [there is a D3.js visualisation](https://bl.ocks.org/Cuahchic/db05dda3b9abc246ca478eb48ce08e6c) which uses the `08` file outputted above. See below for a preview:
 
-![D3 Preview](https://github.com/Cuahchic/map-voronoi/tree/master/img/d3blocks_preview.PNG)
+![D3 Preview](https://github.com/Cuahchic/map-voronoi/blob/master/img/d3blocks_preview.PNG)
