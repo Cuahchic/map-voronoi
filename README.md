@@ -25,7 +25,7 @@ Once you have all your desired files, run the Python script and the outputs will
 
 ## The Effect Of `N` On The Output	
 Obviously, the higher number of samples that are used to construct the output the more faithful it will be to the original image. The GIF below shows a run through of the affect of `N` on the output:
-
+![Changing N](https://github.com/Cuahchic/map-voronoi/blob/master/img/effect_of_N.gif)
 
 
 ## Interactive Visualisation
