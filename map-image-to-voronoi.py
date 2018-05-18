@@ -40,7 +40,7 @@ def denoise(img, denoise_type = 'bilateral', printout = False):
         printout = False    # No point in printing if we didn't change the image
         
     if printout:
-        output_filename = os.path.join(img['path'], '01_' + img['root_filename'] + '_denoised.png')
+        output_filename = os.path.join(img['path'], '01_{}_{}_denoised.png'.format(img['root_filename'], img['n']))
         print('Printing {}'.format(output_filename))
         imsave(output_filename, denoised_img)
     
@@ -55,7 +55,7 @@ def decolour(img, denoised_img, printout = False):
     img_lab = rgb2lab(denoised_img)
     
     if printout:
-        output_filename = os.path.join(img['path'], '02_' + img['root_filename'] + '_grayscale.png')
+        output_filename = os.path.join(img['path'], '02_{}_{}_grayscale.png'.format(img['root_filename'], img['n']))
         print('Printing {}'.format(output_filename))
         imsave(output_filename, img_gray)
     
@@ -71,7 +71,7 @@ def entropies(img, img_gray, printout = False):
     entropy_weight = gaussian_filter(dilation(entropy_weight, disk(15)), 5)
     
     if printout:
-        output_filename = os.path.join(img['path'], '03_' + img['root_filename'] + '_entropyweights.png')
+        output_filename = os.path.join(img['path'], '03_{}_{}_entropyweights.png'.format(img['root_filename'], img['n']))
         print('Printing {}'.format(output_filename))
         imsave(output_filename, entropy_weight)
     
@@ -87,7 +87,7 @@ def edges(img, img_lab, printout = False):
     edge_weight = dilation(edge_weight, disk(5))
     
     if printout:
-        output_filename = os.path.join(img['path'], '04_' + img['root_filename'] + '_edgeweights.png')
+        output_filename = os.path.join(img['path'], '04_{}_{}_edgeweights.png'.format(img['root_filename'], img['n']))
         print('Printing {}'.format(output_filename))
         imsave(output_filename, edge_weight)
     
@@ -99,6 +99,10 @@ def edges(img, img_lab, printout = False):
 def poisson_disc(img, entropy_weight, edge_weight, n, k=30, printout = False):
     print('Calculating random Poisson sampling...')
     
+    # If user doesn't supply number of samples then take it from img dictionary
+    if n is None:
+        n = img['n']
+    
     h, w = img['img_array'].shape[:2]
 
     weight = (0.3*entropy_weight + 0.7*edge_weight)
@@ -106,7 +110,7 @@ def poisson_disc(img, entropy_weight, edge_weight, n, k=30, printout = False):
     weight = weight
 
     max_dist = min(h, w) / 4
-    avg_dist = math.sqrt(w * h / (n * math.pi * 0.5) ** (1.05))
+    avg_dist = math.sqrt(w * h / (n * math.pi * 0.5) ** (1.02))
     min_dist = avg_dist / 4
 
     dists = np.clip(avg_dist / weight, min_dist, max_dist)
@@ -167,7 +171,7 @@ def poisson_disc(img, entropy_weight, edge_weight, n, k=30, printout = False):
         for s in sample_points:
             poisson_out[s] = 1.0
         
-        output_filename = os.path.join(img['path'], '05_' + img['root_filename'] + '_allpoissonsamples.png')
+        output_filename = os.path.join(img['path'], '05_{}_{}_allpoissonsamples.png'.format(img['root_filename'], img['n']))
         print('Printing {}'.format(output_filename))
         imsave(output_filename, poisson_out)
 
@@ -176,6 +180,10 @@ def poisson_disc(img, entropy_weight, edge_weight, n, k=30, printout = False):
 
 # For each Voronoi cell sample the colour so we can make the whole cell the same colour
 def sample_colors(img, sample_points, n, printout = False):
+    # If user doesn't supply number of samples then take it from img dictionary
+    if n is None:
+        n = img['n']
+    
     h, w = img['img_array'].shape[:2]
 
     print("Sampling colors...")
@@ -223,7 +231,7 @@ def sample_colors(img, sample_points, n, printout = False):
             int_coords = (int(coords[0]), int(coords[1]))
             samples_out[int_coords] = 1.0
         
-        output_filename = os.path.join(img['path'], '06_' + img['root_filename'] + '_filteredpoissonsamples.png')
+        output_filename = os.path.join(img['path'], '06_{}_{}_filteredpoissonsamples.png'.format(img['root_filename'], img['n']))
         print('Printing {}'.format(output_filename))
         imsave(output_filename, samples_out)
 
@@ -256,18 +264,25 @@ def render(img, color_samples):
 
 # Get the sample centroids and export them as a JSON
 def export_centroids(img, samples):
-    data_out = []
-    for s in samples:
-        coords = s[:2][::-1]
-        int_coords = (int(coords[0]), int(coords[1]))
-        data_out.append(int_coords)
+    # Get id, coordinates and colour of each cell
+    centroids = [{'id': i, 'coords': s[0:2], 'colours': s[2:]} for i, s in enumerate(samples)]
     
-    output = [{'id': ind, 'coords': coords} for ind, coords in enumerate(data_out)]
+    # Colours are fractional RGB, need to multiply by 255
+    # Note that Python will automatically update output when o is updated as o is only a pointer to the position in the array
+    for cent in centroids:
+        cent['colours'] = tuple(int(255 * col) for col in cent['colours'])
     
-    output_filename = os.path.join(img['path'], '08_' + img['root_filename'] + '_voronoicentroids.json')
+    # Need some metadata for plotting purposes
+    metadata = {'max_x': img['img_array'].shape[0], 'max_y': img['img_array'].shape[1]}
+    
+    # Collate into JSON
+    json_out = {'metadata': metadata, 'centroids': centroids}
+    
+    # Save output to disk
+    output_filename = os.path.join(img['path'], '08_{}_{}_voronoicentroids.json'.format(img['root_filename'], img['n']))
     with open(output_filename, 'w') as outfile:
         print('Printing {}'.format(output_filename))
-        json.dump(output, outfile)
+        json.dump(json_out, outfile)
 
 
 """ **************************************************************
@@ -276,27 +291,28 @@ def export_centroids(img, samples):
 # Main body of code, not designed to be run from command line so no need for main() function
 # Initial setup parameters
 os.chdir('C:/GitWorkspace/map-voronoi') # Base directory
-n = 3000                                # Number of desired centroids for Voronoi
 
 # Read all JPG images prefixed 00 into an array to be Voronoi-ised
 imgs = []
 for filename in glob.glob('maps/00*.jpg'): #assuming gif
     basename = os.path.basename(filename)
+    underscore_locations = [i for i, letter in enumerate(basename) if letter == '_']
     imgs.append({'path': os.path.dirname(filename),
                  'fullpath': filename,
                  'filename': basename,
-                 'root_filename': basename[3:(len(basename)-4)],
-                 'img_array': imread(filename)[:, :, :3]})
+                 'root_filename': basename[(underscore_locations[0] + 1):(underscore_locations[1])],
+                 'img_array': imread(filename)[:, :, :3],
+                 'n': int(basename[(underscore_locations[1] + 1):(len(basename) - 4)])})
     
 for img in imgs:    
     denoised_img = denoise(img, None, printout = True)
     img_gray, img_lab = decolour(img, denoised_img, printout = True)
     entropy_weight = entropies(img, img_gray, printout = True)
     edge_weight = edges(img, img_lab, printout = True)
-    sample_points = poisson_disc(img, entropy_weight, edge_weight, n, k = 30, printout = True)
-    samples = sample_colors(img, sample_points, n, printout = True)
+    sample_points = poisson_disc(img, entropy_weight, edge_weight, n = None, k = 30, printout = True)
+    samples = sample_colors(img, sample_points, n = None, printout = True)
 
-    output_filename = os.path.join(img['path'], '07_' + img['root_filename'] + '_voronoi.png')
+    output_filename = os.path.join(img['path'], '07_{}_{}_voronoi.png'.format(img['root_filename'], img['n']))
     print('Printing {}'.format(output_filename))
     imsave(output_filename, render(img, samples))
     
