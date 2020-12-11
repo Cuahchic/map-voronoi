@@ -19,7 +19,7 @@ from skimage.morphology import disk, dilation
 from skimage.util import img_as_ubyte
 from skimage.io import imread, imsave
 from skimage.color import rgb2gray, rgb2lab, lab2rgb
-from skimage.filters import sobel, gaussian_filter
+from skimage.filters import sobel, gaussian
 from skimage.restoration import denoise_bilateral, denoise_tv_bregman
 from skimage.transform import downscale_local_mean
 
@@ -68,7 +68,7 @@ def entropies(img, img_gray, printout = False):
     
     entropy_weight = 2**(entropy(img_as_ubyte(img_gray), disk(15)))
     entropy_weight /= np.amax(entropy_weight)
-    entropy_weight = gaussian_filter(dilation(entropy_weight, disk(15)), 5)
+    entropy_weight = gaussian(dilation(entropy_weight, disk(15)), 5)
     
     if printout:
         output_filename = os.path.join(img['path'], '03_{}_{}_entropyweights.png'.format(img['root_filename'], img['n']))
